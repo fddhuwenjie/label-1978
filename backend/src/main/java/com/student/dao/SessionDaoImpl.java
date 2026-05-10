@@ -37,7 +37,7 @@ public class SessionDaoImpl implements SessionDao {
 
     @Override
     public Session findBySessionId(Connection conn, String sessionId) throws SQLException {
-        String sql = "SELECT * FROM sessions WHERE session_id = ? AND expires_at > NOW()";
+        String sql = "SELECT * FROM sessions WHERE session_id = ?";
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, sessionId);
             try (ResultSet rs = ps.executeQuery()) {
@@ -65,6 +65,15 @@ public class SessionDaoImpl implements SessionDao {
         } catch (SQLException e) {
             logger.error("Database operation failed", e);
             throw new DaoException("删除会话失败", e);
+        }
+    }
+
+    @Override
+    public boolean delete(Connection conn, String sessionId) throws SQLException {
+        String sql = "DELETE FROM sessions WHERE session_id = ?";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, sessionId);
+            return ps.executeUpdate() > 0;
         }
     }
 

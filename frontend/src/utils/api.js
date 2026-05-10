@@ -22,7 +22,10 @@ api.interceptors.response.use(
   error => {
     if (error.response && error.response.status === 401) {
       clearSession()
-      router.push('/login')
+      if (router.currentRoute.value.path !== '/login') {
+        router.push('/login')
+      }
+      return Promise.reject(error.response.data || { code: 401, message: '登录已过期，请重新登录' })
     }
     return Promise.reject(error.response ? error.response.data : error)
   }
