@@ -162,22 +162,29 @@ public class AuthFilterTest {
     public void testExpiredSession_RequestIntercepted_Returns401() throws Exception {
         String sessionId = "expired-session-id";
 
+        Session session = new Session();
+        session.setSessionId(sessionId);
+        session.setUserId(1);
+        session.setExpiresAt(new Timestamp(System.currentTimeMillis() - 30000));
+
         when(request.getRequestURI()).thenReturn("/api/students");
         when(request.getHeader("X-Session-Id")).thenReturn(sessionId);
 
         try (MockedStatic<DBUtil> mockedDBUtil = mockStatic(DBUtil.class)) {
             Connection mockConnection = mock(Connection.class);
             mockedDBUtil.when(DBUtil::getConnection).thenReturn(mockConnection);
-            
-            when(sessionDao.findBySessionId(eq(mockConnection), eq(sessionId))).thenReturn(null);
+
+            when(sessionDao.findBySessionId(eq(mockConnection), eq(sessionId))).thenReturn(session);
+            when(sessionDao.delete(eq(mockConnection), eq(sessionId))).thenReturn(true);
 
             authFilter.doFilter(request, response, filterChain);
 
             String responseContent = responseWriter.toString();
             System.out.println("Expired Session Response: " + responseContent);
-            
+
             assertTrue(responseContent.contains("\"code\":401"));
             assertTrue(responseContent.contains("登录已过期，请重新登录"));
+            verify(sessionDao).delete(eq(mockConnection), eq(sessionId));
             verify(filterChain, never()).doFilter(any(), any());
         }
     }

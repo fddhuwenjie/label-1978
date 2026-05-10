@@ -10,6 +10,7 @@ public interface SessionDao {
     Session findBySessionId(String sessionId);
     Session findBySessionId(Connection conn, String sessionId) throws SQLException;
     boolean delete(String sessionId);
+    boolean delete(Connection conn, String sessionId) throws SQLException;
     boolean refresh(String sessionId, Timestamp newExpiresAt);
     boolean refresh(Connection conn, String sessionId, Timestamp newExpiresAt) throws SQLException;
     void cleanExpired();
