@@ -22,7 +22,9 @@ api.interceptors.response.use(
   error => {
     if (error.response && error.response.status === 401) {
       clearSession()
-      router.push('/login')
+      if (router.currentRoute.value.path !== '/login') {
+        router.push('/login')
+      }
     }
     return Promise.reject(error.response ? error.response.data : error)
   }

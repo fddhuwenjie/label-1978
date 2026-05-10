@@ -64,6 +64,12 @@ public class AuthFilter implements Filter {
                 return;
             }
 
+            if (session.getExpiresAt().getTime() < System.currentTimeMillis()) {
+                sessionDao.delete(sessionId);
+                JsonUtil.writeError(res, 401, "登录已过期，请重新登录");
+                return;
+            }
+
             Timestamp newExpiry = new Timestamp(System.currentTimeMillis() + AppConfig.SESSION_TIMEOUT_SECONDS * 1000);
             sessionDao.refresh(conn, sessionId, newExpiry);
 
