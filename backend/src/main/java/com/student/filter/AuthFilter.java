@@ -58,8 +58,15 @@ public class AuthFilter implements Filter {
 
         // 使用单个连接完成所有数据库操作
         try (Connection conn = DBUtil.getConnection()) {
-            Session session = sessionDao.findBySessionId(conn, sessionId);
+            Session session = sessionDao.findBySessionIdIncludeExpired(conn, sessionId);
             if (session == null) {
+                JsonUtil.writeError(res, 401, "登录已过期，请重新登录");
+                return;
+            }
+
+            Timestamp now = new Timestamp(System.currentTimeMillis());
+            if (session.getExpiresAt().before(now)) {
+                sessionDao.delete(conn, sessionId);
                 JsonUtil.writeError(res, 401, "登录已过期，请重新登录");
                 return;
             }
