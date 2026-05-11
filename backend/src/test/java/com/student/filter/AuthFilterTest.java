@@ -145,7 +145,7 @@ public class AuthFilterTest {
             Connection mockConnection = mock(Connection.class);
             mockedDBUtil.when(DBUtil::getConnection).thenReturn(mockConnection);
             
-            when(sessionDao.findBySessionId(eq(mockConnection), eq(sessionId))).thenReturn(session);
+            when(sessionDao.findBySessionIdIncludeExpired(eq(mockConnection), eq(sessionId))).thenReturn(session);
             when(sessionDao.refresh(eq(mockConnection), eq(sessionId), any(Timestamp.class))).thenReturn(true);
             when(userDao.findById(eq(mockConnection), eq(userId))).thenReturn(user);
 
@@ -159,8 +159,13 @@ public class AuthFilterTest {
     }
 
     @Test
-    public void testExpiredSession_RequestIntercepted_Returns401() throws Exception {
+    public void testExpiredSession_RequestIntercepted_Returns401AndDeletesSession() throws Exception {
         String sessionId = "expired-session-id";
+        
+        Session expiredSession = new Session();
+        expiredSession.setSessionId(sessionId);
+        expiredSession.setUserId(1);
+        expiredSession.setExpiresAt(new Timestamp(System.currentTimeMillis() - 10000));
 
         when(request.getRequestURI()).thenReturn("/api/students");
         when(request.getHeader("X-Session-Id")).thenReturn(sessionId);
@@ -169,7 +174,8 @@ public class AuthFilterTest {
             Connection mockConnection = mock(Connection.class);
             mockedDBUtil.when(DBUtil::getConnection).thenReturn(mockConnection);
             
-            when(sessionDao.findBySessionId(eq(mockConnection), eq(sessionId))).thenReturn(null);
+            when(sessionDao.findBySessionIdIncludeExpired(eq(mockConnection), eq(sessionId))).thenReturn(expiredSession);
+            when(sessionDao.delete(eq(mockConnection), eq(sessionId))).thenReturn(true);
 
             authFilter.doFilter(request, response, filterChain);
 
@@ -179,6 +185,7 @@ public class AuthFilterTest {
             assertTrue(responseContent.contains("\"code\":401"));
             assertTrue(responseContent.contains("登录已过期，请重新登录"));
             verify(filterChain, never()).doFilter(any(), any());
+            verify(sessionDao, times(1)).delete(eq(mockConnection), eq(sessionId));
         }
     }
 
@@ -204,7 +211,7 @@ public class AuthFilterTest {
             Connection mockConnection = mock(Connection.class);
             mockedDBUtil.when(DBUtil::getConnection).thenReturn(mockConnection);
             
-            when(sessionDao.findBySessionId(eq(mockConnection), eq(sessionId))).thenReturn(session);
+            when(sessionDao.findBySessionIdIncludeExpired(eq(mockConnection), eq(sessionId))).thenReturn(session);
             when(sessionDao.refresh(eq(mockConnection), eq(sessionId), any(Timestamp.class))).thenReturn(true);
             when(userDao.findById(eq(mockConnection), eq(userId))).thenReturn(user);
 

@@ -2,6 +2,8 @@ import axios from 'axios'
 import { getSession, clearSession, refreshSession } from './auth'
 import router from '../router'
 
+let isRedirectingToLogin = false
+
 const api = axios.create({
   baseURL: '/api',
   timeout: 10000,
@@ -22,7 +24,12 @@ api.interceptors.response.use(
   error => {
     if (error.response && error.response.status === 401) {
       clearSession()
-      router.push('/login')
+      if (!isRedirectingToLogin) {
+        isRedirectingToLogin = true
+        router.push('/login').finally(() => {
+          isRedirectingToLogin = false
+        })
+      }
     }
     return Promise.reject(error.response ? error.response.data : error)
   }

@@ -42,17 +42,45 @@ public class SessionDaoImpl implements SessionDao {
             ps.setString(1, sessionId);
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
-                    Session session = new Session();
-                    session.setId(rs.getInt("id"));
-                    session.setSessionId(rs.getString("session_id"));
-                    session.setUserId(rs.getInt("user_id"));
-                    session.setCreatedAt(rs.getTimestamp("created_at"));
-                    session.setExpiresAt(rs.getTimestamp("expires_at"));
-                    return session;
+                    return extractSession(rs);
                 }
             }
         }
         return null;
+    }
+
+    @Override
+    public Session findBySessionIdIncludeExpired(String sessionId) {
+        try (Connection conn = DBUtil.getConnection()) {
+            return findBySessionIdIncludeExpired(conn, sessionId);
+        } catch (SQLException e) {
+            logger.error("Database operation failed", e);
+            throw new DaoException("查询会话失败", e);
+        }
+    }
+
+    @Override
+    public Session findBySessionIdIncludeExpired(Connection conn, String sessionId) throws SQLException {
+        String sql = "SELECT * FROM sessions WHERE session_id = ?";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, sessionId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return extractSession(rs);
+                }
+            }
+        }
+        return null;
+    }
+
+    private Session extractSession(ResultSet rs) throws SQLException {
+        Session session = new Session();
+        session.setId(rs.getInt("id"));
+        session.setSessionId(rs.getString("session_id"));
+        session.setUserId(rs.getInt("user_id"));
+        session.setCreatedAt(rs.getTimestamp("created_at"));
+        session.setExpiresAt(rs.getTimestamp("expires_at"));
+        return session;
     }
 
     @Override
@@ -65,6 +93,15 @@ public class SessionDaoImpl implements SessionDao {
         } catch (SQLException e) {
             logger.error("Database operation failed", e);
             throw new DaoException("删除会话失败", e);
+        }
+    }
+
+    @Override
+    public boolean delete(Connection conn, String sessionId) throws SQLException {
+        String sql = "DELETE FROM sessions WHERE session_id = ?";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, sessionId);
+            return ps.executeUpdate() > 0;
         }
     }
 
